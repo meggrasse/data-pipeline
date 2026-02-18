@@ -26,9 +26,9 @@ type Source interface {
 	// What is a Message? It is a type that represents the data being sent.
 	// Also a key design feature is that it kicks off a goroutine (i.e. async reading)
     // Messages() <-chan Result[Message]
-	// For now, we'll just send strings. Later, we'll add a Message type.
 	// TODO, make sure it can only recieve.
-	Messages(chan string)
+	// TODO: handle errors
+	Messages(chan Message)
 }
 
 // type Message interface {
