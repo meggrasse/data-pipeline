@@ -1,28 +1,25 @@
 package main
 
 import (
+	"fmt"
 	"os"
-	"log"
 	"grasse/pipeline"
 )
 
-type FlowTimeSeriesDestination struct {
-	// I want to emulate writing to a file specified by filename.
-	// Each line should be a string.
-
-	// stream chan string
+type SensorTimeSeriesDestination struct {
+  filename string
 }
 
-func (flowTimeSeries *FlowTimeSeriesDestination) Messages(stream chan pipeline.Message) {
-	// TODO:
-	file, err := os.Create("sample_data/destination/flow_timeseries_destination.csv")
+// TODO: errors should be transformed before they reach the destination.
+func (ts *SensorTimeSeriesDestination) Messages(c chan pipeline.Message) {
+	file, err := os.Create("sample_data/destination/" + ts.filename)
 	if err != nil {
-		// TODO:
-		log.Fatal(err)
+		fmt.Printf("Error creating file: %v", err)
+		return
 	}
 	defer file.Close()
 
-	for message := range stream {
-		file.WriteString("[" + message.SchemaType + "," + message.SchemaVersion + "] - (" + message.Payload + ") \n")
+	for message := range c {
+		file.WriteString(message.ID.String() + ": [" + message.SchemaType + "," + message.SchemaVersion + "] - (" + message.Payload + ") \n")
 	}
 }

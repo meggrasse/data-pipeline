@@ -3,7 +3,33 @@ package pipeline
 import (
 	"fmt"
 	"sync"
+
+	"github.com/google/uuid"
 )
+
+type MessageStream = chan Message
+
+type Message struct {
+	// TODO: bytes.
+	Payload string
+	ID uuid.UUID
+	SchemaType string
+	SchemaVersion string
+}
+
+type Source interface {
+	// TODO: make sure it can only send.
+	Messages(MessageStream)
+}
+
+type Processing interface {
+	Process(MessageStream)
+}
+
+type Destination interface {
+	// TODO: make sure it can only send.
+	Messages(MessageStream)
+}
 
 type Pipeline struct {
 	Sources []Source
@@ -13,13 +39,13 @@ type Pipeline struct {
 }
 
 func (p *Pipeline) Run() {
-	var channels []chan Message
+	var channels []MessageStream
 	for _, source := range p.Sources {
-		ch := make(chan Message)
+		ch := make(MessageStream)
 		channels = append(channels, ch)
 		go source.Messages(ch)
 	}
-	merged := make(chan Message)
+	merged := make(MessageStream)
 	go merge(merged, channels)
 	for _, processing := range p.Processings {
 		go processing.Process(merged)
@@ -27,26 +53,28 @@ func (p *Pipeline) Run() {
 	p.Destination.Messages(merged)
 }
 
-func merge(out chan Message, inputs []chan Message) {
+// merge fans in from all source channels; validates schema/version and forwards only valid messages.
+// Invalid messages are skipped (clients handle their own errors in each stage).
+func merge(out MessageStream, inputs []MessageStream) {
 	var wg sync.WaitGroup
 	for _, ch := range inputs {
 		wg.Add(1)
-		go func(c <-chan Message) {
+		go func(c MessageStream) {
 			for message := range c {
 				versions, ok := Schemas[message.SchemaType]
 				if !ok {
-					fmt.Println("Skipping message: %s schema not supported: %s. Allowed schemas: %v", message.ID, message.SchemaType, Schemas)
+					fmt.Printf("Skipping message %s: schema not supported: %s. Allowed: %v\n", message.ID, message.SchemaType, Schemas)
 					continue
 				}
 				valid := false
-				for _, v := range versions {
-					if v == message.SchemaVersion {
+				for _, version := range versions {
+					if version == message.SchemaVersion {
 						valid = true
 						break
 					}
 				}
 				if !valid {
-					fmt.Println("Skipping message: %s schema version not supported: %s. Allowed versions: %v", message.ID, message.SchemaVersion, versions)
+					fmt.Printf("Skipping message %s: schema version not supported: %s. Allowed: %v\n", message.ID, message.SchemaVersion, versions)
 					continue
 				}
 				out <- message
@@ -66,7 +94,15 @@ var Schemas = map[string][]string{
 }
 
 // todo: send and receive channels only in source/destination
-// result (i.e. errors)
 // log
 // zero or more processing stages that
 // transform or validate data,
+
+// some processing stages transform (modify, reduce filter) messages based on a single schema.
+// others may combine multiple messages (i.e., with the same timestamp and site internal id) into one representation. 
+
+// channels from all sources need to be available to the processesing stage.
+	// Or actually from previous processing stages as well.
+	// Messages themselves likely need an indentifer, and then sources need to
+	// describe themselves and their schema.
+	// New schemas may be defined by processing stages as they provide transformations to later stages.
