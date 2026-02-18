@@ -10,7 +10,6 @@ type SensorTimeSeriesDestination struct {
   filename string
 }
 
-// TODO: errors should be transformed before they reach the destination.
 func (ts *SensorTimeSeriesDestination) Messages(c chan pipeline.Message) {
 	file, err := os.Create("sample_data/destination/" + ts.filename)
 	if err != nil {

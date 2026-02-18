@@ -10,10 +10,11 @@ func main() {
 	emptySource := EmptySource{}
 	destination := SensorTimeSeriesDestination{filename: "sensor_timeseries_destination.csv"}
 	transformation := ExampleTransformation{}
+	simpeTransformation := SimpleTransformation{}
 
 	pipeline := pipeline.Pipeline{
 		Sources: []pipeline.Source{&flowSource, &pressureSource, &emptySource},
-		Processings: []pipeline.Processing{&transformation},
+		Processings: []pipeline.Processing{&transformation, &simpeTransformation},
 		Destination: &destination,
 	}
 	pipeline.Run()

@@ -10,7 +10,6 @@ import (
 type MessageStream = chan Message
 
 type Message struct {
-	// TODO: bytes.
 	Payload string
 	ID uuid.UUID
 	SchemaType string
@@ -18,16 +17,14 @@ type Message struct {
 }
 
 type Source interface {
-	// TODO: make sure it can only send.
 	Messages(MessageStream)
 }
 
 type Processing interface {
-	Process(MessageStream)
+	Process(in MessageStream, out MessageStream)
 }
 
 type Destination interface {
-	// TODO: make sure it can only send.
 	Messages(MessageStream)
 }
 
@@ -47,14 +44,15 @@ func (p *Pipeline) Run() {
 	}
 	merged := make(MessageStream)
 	go merge(merged, channels)
-	for _, processing := range p.Processings {
-		go processing.Process(merged)
+	ch := merged
+	for _, proc := range p.Processings {
+		next := make(MessageStream)
+		go proc.Process(ch, next)
+		ch = next
 	}
-	p.Destination.Messages(merged)
+	p.Destination.Messages(ch)
 }
 
-// merge fans in from all source channels; validates schema/version and forwards only valid messages.
-// Invalid messages are skipped (clients handle their own errors in each stage).
 func merge(out MessageStream, inputs []MessageStream) {
 	var wg sync.WaitGroup
 	for _, ch := range inputs {
@@ -91,18 +89,5 @@ func merge(out MessageStream, inputs []MessageStream) {
 var Schemas = map[string][]string{
 	"timeseries.flow": {"1.0.0"},
 	"timeseries.pressure": {"1.0.0"},
+	"timeseries.batched": {"1.0.0", "1.1.0"},
 }
-
-// todo: send and receive channels only in source/destination
-// log
-// zero or more processing stages that
-// transform or validate data,
-
-// some processing stages transform (modify, reduce filter) messages based on a single schema.
-// others may combine multiple messages (i.e., with the same timestamp and site internal id) into one representation. 
-
-// channels from all sources need to be available to the processesing stage.
-	// Or actually from previous processing stages as well.
-	// Messages themselves likely need an indentifer, and then sources need to
-	// describe themselves and their schema.
-	// New schemas may be defined by processing stages as they provide transformations to later stages.
