@@ -5,8 +5,11 @@ import (
 )
 
 func main() {
-	source := FlowTimeSeriesStream{}
+	flowSource := FlowTimeSeriesStream{}
+	pressureSource := PressureTimeSeriesStream{}
+	emptySource := EmptySource{}
 	destination := FlowTimeSeriesDestination{}
-	pipeline := pipeline.Pipeline{Sources: []pipeline.Source{&source}, Destination: &destination}
+	transformation := ExampleTransformation{}
+	pipeline := pipeline.Pipeline{Sources: []pipeline.Source{&flowSource, &pressureSource, &emptySource}, Destination: &destination, Processings: []pipeline.Processing{&transformation}}
 	pipeline.Run()
 }

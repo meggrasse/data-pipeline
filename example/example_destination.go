@@ -15,7 +15,7 @@ type FlowTimeSeriesDestination struct {
 
 func (flowTimeSeries *FlowTimeSeriesDestination) Messages(stream chan pipeline.Message) {
 	// TODO:
-	file, err := os.Create("sample_data/flow_timeseries_destination.csv")
+	file, err := os.Create("sample_data/destination/flow_timeseries_destination.csv")
 	if err != nil {
 		// TODO:
 		log.Fatal(err)
