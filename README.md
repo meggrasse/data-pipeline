@@ -12,8 +12,8 @@ The framework provides a `Pipeline` struct, and `Source`, `Processing` and `Dest
 `Pipeline` supports the following functionality:
 
     - `Message`s can be streamed one of more sources, and will be merged together by the pipeline into a single `MessageStream` in the order they were receieved. Merging is acheived via Go's `WaitGroup` (i.e., a semaphore).
-    - Whilst merging, the pipeline ensures the the `Message`'s schema/version pair is valid (i.e., known by the pipeline). TODO: doesn't the client do the proessing?
-    - Processing stages are described as a collection and must be linear. The expected practice from the client is to check the schema of the incoming message, and if it doesn't process messages of this schema, pass it through to the `out` stream. TODO: this suggests that processing stages could actually be defined alongside known schemas by clients. And then better validation checking could be done by the pipeline.
+    - Whilst merging, the pipeline ensures the the `Message`'s schema/version pair is valid (i.e., known by the pipeline).
+    - Processing stages are described as a collection and must be linear. The expected practice from the client is to check the schema of the incoming message, and if it doesn't process messages of this schema, pass it through to the `out` stream.
     - A single destination recieves the `MessageStream` (the `out` stream in the final processing stage) to route to a destination (i.e., write to a file). It's important that destination implementations don't close the incoming channel after processing, as the `WaitGroup` is responsible for that. This adds some complexity, but better matches a client mental model that allows for multiple destinations in the future.
 
 ## Concurrency Model
