@@ -21,6 +21,4 @@ func (ts *SensorTimeSeriesDestination) Messages(c chan pipeline.Message) {
 	for message := range c {
 		file.WriteString(message.ID.String() + ": [" + message.SchemaType + "," + message.SchemaVersion + "] - (" + message.Payload + ") \n")
 	}
-
-	// TODO: c.close()?
 }
