@@ -10,6 +10,7 @@ This was a take-home project for an interview process. Buyer beware!
 The framework provides a `Pipeline` struct, and `Source`, `Processing` and `Destination` interfaces to provide clients some scaffolding in building their data pipelines. 
 
 `Pipeline` supports the following functionality:
+
     - `Message`s can be streamed one of more sources, and will be merged together by the pipeline into a single `MessageStream` in the order they were receieved. Merging is acheived via Go's `WaitGroup` (i.e., a semaphore).
     - Whilst merging, the pipeline ensures the the `Message`'s schema/version pair is valid (i.e., known by the pipeline). TODO: doesn't the client do the proessing?
     - Processing stages are described as a collection and must be linear. The expected practice from the client is to check the schema of the incoming message, and if it doesn't process messages of this schema, pass it through to the `out` stream. TODO: this suggests that processing stages could actually be defined alongside known schemas by clients. And then better validation checking could be done by the pipeline.
@@ -26,9 +27,11 @@ To ensure graceful termination (exiting the program once all source channels are
 ## Testing/Validation
 
 ## Limitations
+
     - Merge buffer overflow
     - client responsiblity (passing message through, error handling, closing channels)
     - messages must be strings.
 
 ## Future Improvements
+
     - Processing interface includes schema types/versions supported by that stage. System is responsible for validating messages into each stage, and passing them directly to the out stream so clients don't have to own this logic, and also allows for stronger validation between processing stages. This also means supported schema types/versions are dynamically set by clients rather than hardcoded in `Pipeline`.
