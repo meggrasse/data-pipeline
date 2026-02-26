@@ -53,6 +53,7 @@ func (p *Pipeline) Run() {
 	p.Destination.Messages(ch)
 }
 
+// TODO use wg.GO
 func merge(out MessageStream, inputs []MessageStream) {
 	var wg sync.WaitGroup
 	for _, ch := range inputs {

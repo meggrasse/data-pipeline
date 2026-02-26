@@ -17,5 +17,5 @@ func main() {
 		Processings: []pipeline.Processing{&transformation, &simpeTransformation},
 		Destination: &destination,
 	}
-	pipeline.Run()
+™	pipeline.Run()
 }
