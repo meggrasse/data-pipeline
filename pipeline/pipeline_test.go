@@ -3,17 +3,57 @@ package pipeline
 import (
 	"testing"
 	"github.com/google/uuid"
+	"sort"
 )
 
-func TestSupportedSchema(t *testing.T) {
-	var validSchemaType string
-	var validSchemaVersion string
-	// TODO: make sure schemas isn't empty
-	for schemaType, versions := range Schemas {
-		validSchemaType = schemaType
-		validSchemaVersion = versions[0]
-		break
+type TestSource struct {
+	t *testing.T
+}
+
+type TestDestination struct {
+	t *testing.T
+}
+
+func validSchema() (string, string) {
+	var keys []string
+	for k := range Schemas {
+		keys = append(keys, k)
 	}
+	sort.Strings(keys)
+	return keys[0], Schemas[keys[0]][0]
+}
+
+func testMessage() Message {
+	validSchemaType, validSchemaVersion := validSchema()
+	return Message{
+		Payload: "test",
+		ID: uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+		SchemaType: validSchemaType,
+		SchemaVersion: validSchemaVersion,
+	}
+}
+
+func (testSource *TestSource) Messages(stream chan Message) {
+	stream <- testMessage()
+	close(stream)
+}
+
+func (testDestination *TestDestination) Messages(stream chan Message) {
+	count := 0
+	for message := range stream {
+		count++
+		msg := testMessage()
+		if message != msg {
+			testDestination.t.Errorf("Message should be unaltered: %v != %v", message, msg)
+		}
+	}
+	if count != 1 {
+		testDestination.t.Errorf("Expected single message.")
+	}
+}
+
+func TestSupportedSchema(t *testing.T) {
+	validSchemaType, validSchemaVersion := validSchema()
 	message := Message {
 		Payload: "test",
 		ID: uuid.New(),
@@ -52,12 +92,7 @@ func TestUnsupportedSchemaType(t *testing.T) {
 }
 
 func TestUnsupportedSchemaVersion(t *testing.T) {
-	var validSchemaType string
-	// TODO: make sure schemas isn't empty
-	for schemaType, _ := range Schemas {
-		validSchemaType = schemaType
-		break
-	}
+	validSchemaType, _ := validSchema()
 	message := Message {
 		Payload: "test",
 		ID: uuid.New(),
@@ -74,49 +109,6 @@ func TestUnsupportedSchemaVersion(t *testing.T) {
 	}
 }
 
-func testMessage() Message {
-	var validSchemaType string
-	var validSchemaVersion string
-	// TODO: make sure schemas isn't empty
-	for schemaType, versions := range Schemas {
-		validSchemaType = schemaType
-		validSchemaVersion = versions[0]
-		break
-	}
-	return Message{
-		Payload: "test",
-		ID: uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
-		SchemaType: validSchemaType,
-		SchemaVersion: validSchemaVersion,
-	}
-}
-
-type TestSource struct {
-	t *testing.T
-}
-
-func (testSource *TestSource) Messages(stream chan Message) {
-	stream <- testMessage()
-	close(stream)
-}
-
-type TestDestination struct {
-	t *testing.T
-}
-
-func (testDestination *TestDestination) Messages(stream chan Message) {
-	count := 0
-	for message := range stream {
-		count++
-		if message != testMessage() {
-			testDestination.t.Errorf("Message should be unaltered: %v", message)
-		}
-	}
-	if count != 1 {
-		testDestination.t.Errorf("Expected single message.")
-	}
-}
-
 // TODO: test no source?
 func TestNoProcessingPipeline(t *testing.T) {
 
@@ -126,4 +118,25 @@ func TestNoProcessingPipeline(t *testing.T) {
 		Destination: &TestDestination{t: t},
 	}
 	pipeline.Run()
+}
+
+func TestFanIn(t *testing.T) {
+	validSchemaType, validSchemaVersion := validSchema()
+	m := Message{
+		Payload: "test",
+		ID: uuid.New(),
+		SchemaType: validSchemaType,
+		SchemaVersion: validSchemaVersion,
+	}
+	in1 := make(MessageStream)
+	in2 := make(MessageStream)
+	out := make(MessageStream)
+	go merge(out, []MessageStream{in1, in2})
+	go func() {
+		in1 <- m
+		in2 <- m
+	}()
+	// drain out values whilst both channels are still open
+	<- out
+	<- out
 }
