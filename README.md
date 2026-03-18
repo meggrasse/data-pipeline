@@ -1,5 +1,13 @@
 This was a take-home project for an interview process. Buyer beware!
 
+# Execution
+
+To run the provided `example` module that excercises the `pipeline` package, navigate to the `example` directory and run `$ go run .`. The output from the example will be populated in `example/sample_data/destination/sensor_timeseries_destination.csv`. The example includes input files, source stages, processing stages, and a destination stage that writes the stream to the output file.
+
+Tests are included in the `pipeline` package. Those can be excercised from the `pipeline` directory using `$ go test.`
+
+# Design
+
 ## Design Goals
 
 - Support multiple, simultaneous sources.
