@@ -62,7 +62,7 @@ func TestSupportedSchema(t *testing.T) {
 	}
 	in := make(MessageStream)
 	out := make(MessageStream)
-	go merge(out, []MessageStream{in})
+	go fanIn(out, []MessageStream{in})
 	in <- message
 	close(in)
 	count := 0
@@ -78,12 +78,12 @@ func TestUnsupportedSchemaType(t *testing.T) {
 	message := Message{
 		Payload: "test",
 		ID: uuid.New(),
-		SchemaType: "not-supported",
+		SchemaType: "not-supported-type",
 		SchemaVersion: "1.0.0",
 	}
 	in := make(MessageStream)
 	out := make(MessageStream)
-	go merge(out, []MessageStream{in})
+	go fanIn(out, []MessageStream{in})
 	in <- message
 	close(in)
 	for _ = range out {
@@ -97,11 +97,11 @@ func TestUnsupportedSchemaVersion(t *testing.T) {
 		Payload: "test",
 		ID: uuid.New(),
 		SchemaType: validSchemaType,
-		SchemaVersion: "not-supported",
+		SchemaVersion: "not-supported-vers",
 	}
 	in := make(MessageStream)
 	out := make(MessageStream)
-	go merge(out, []MessageStream{in})
+	go fanIn(out, []MessageStream{in})
 	in <- message
 	close(in)
 	for _ = range out {
@@ -131,7 +131,7 @@ func TestFanIn(t *testing.T) {
 	in1 := make(MessageStream)
 	in2 := make(MessageStream)
 	out := make(MessageStream)
-	go merge(out, []MessageStream{in1, in2})
+	go fanIn(out, []MessageStream{in1, in2})
 	go func() {
 		in1 <- m
 		in2 <- m
@@ -139,4 +139,12 @@ func TestFanIn(t *testing.T) {
 	// drain out values whilst both channels are still open
 	<- out
 	<- out
+
+	// ensure `close` is sent on `out` if input channels are closed.
+	close(in1)
+	close(in2)
+	_, open := <- out
+	if open {
+		t.Errorf("Expected out channel to be closed")
+	}
 }

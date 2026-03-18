@@ -1,8 +1,9 @@
 package pipeline
 
 import (
-	"fmt"
-	"sync"
+	"log"
+	"maps"
+	"slices"
 
 	"github.com/google/uuid"
 )
@@ -43,7 +44,7 @@ func (p *Pipeline) Run() {
 		go source.Messages(ch)
 	}
 	merged := make(MessageStream)
-	go merge(merged, channels)
+	go fanIn(merged, channels)
 	ch := merged
 	for _, proc := range p.Processings {
 		next := make(MessageStream)
@@ -53,38 +54,40 @@ func (p *Pipeline) Run() {
 	p.Destination.Messages(ch)
 }
 
-// TODO use wg.GO
-func merge(out MessageStream, inputs []MessageStream) {
-	var wg sync.WaitGroup
-	for _, ch := range inputs {
-		wg.Add(1)
-		go func(c MessageStream) {
-			for message := range c {
-				versions, ok := Schemas[message.SchemaType]
-				if !ok {
-					fmt.Printf("Skipping message %s: schema not supported: %s. Allowed: %v\n", message.ID, message.SchemaType, Schemas)
-					continue
+func fanIn(out MessageStream, ins []MessageStream) {
+	// Following Go's idiom of using a channel as a semaphore.
+	closed := make(chan int, len(ins))
+	for _, ch := range ins {
+		// Unique loop var on each iteration as of 1.22.
+		// c.f. https://go.dev/wiki/LoopvarExperiment 
+		go func() {
+			defer func() { closed <- 1 }()
+			for msg := range ch {
+				if validate(msg) {
+					out <- msg
 				}
-				valid := false
-				for _, version := range versions {
-					if version == message.SchemaVersion {
-						valid = true
-						break
-					}
-				}
-				if !valid {
-					fmt.Printf("Skipping message %s: schema version not supported: %s. Allowed: %v\n", message.ID, message.SchemaVersion, versions)
-					continue
-				}
-				out <- message
 			}
-			wg.Done()
-		}(ch)
+		}()
 	}
-	go func() {
-		wg.Wait()
-		close(out)
-	}()
+	for range len(ins) {
+		<- closed
+	}
+	close(out)
+}
+
+func validate(msg Message) bool {
+	versions, ok := Schemas[msg.SchemaType]
+	if !ok {
+		log.Printf("Message not valid: schema type not supported [Message ID: %s; Schema type: %s] Supported Schema types: %v \n", msg.ID, msg.SchemaType, slices.Collect(maps.Keys(Schemas)))
+		return false
+	}
+	for _, version := range versions {
+		if version == msg.SchemaVersion {
+			return true
+		}
+	}
+	log.Printf("Message not valid: schema version not supported [Message ID: %s; Schema version: %s] Supported Schema versions: %v \n", msg.ID, msg.SchemaVersion, versions)
+	return false
 }
 
 var Schemas = map[string][]string{
