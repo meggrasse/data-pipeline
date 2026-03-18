@@ -5,6 +5,7 @@ import (
 	"os"
 	"bufio"
 	"strings"
+  "log"
   "github.com/google/uuid"
 )
 
@@ -12,10 +13,12 @@ type SensorTimeSeriesStream struct {
   filename string
 }
 
-func (ts *SensorTimeSeriesStream) Messages(c chan pipeline.Message) {
+func (ts *SensorTimeSeriesStream) Messages(c pipeline.MessageStream) {
+    defer close(c)
+    
     file, open_err := os.Open("sample_data/source/" + ts.filename)
     if open_err != nil {
-      return
+      log.Fatalf("Error opening file: %v", open_err)
     }
     defer file.Close()
 
@@ -37,7 +40,6 @@ func (ts *SensorTimeSeriesStream) Messages(c chan pipeline.Message) {
     }
 
     if err := scanner.Err(); err != nil {
+      log.Fatalf("Error scanning file: %v", err)
     }
-
-    close(c)
 }

@@ -54,6 +54,7 @@ func (p *Pipeline) Run() {
 	p.Destination.Messages(ch)
 }
 
+// Blocks until all sources are closed; should be called in a goroutine.
 func fanIn(out MessageStream, ins []MessageStream) {
 	// Following Go's idiom of using a channel as a semaphore.
 	closed := make(chan int, len(ins))

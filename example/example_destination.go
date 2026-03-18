@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"log"
 	"grasse/pipeline"
 )
 
@@ -13,7 +13,7 @@ type SensorTimeSeriesDestination struct {
 func (ts *SensorTimeSeriesDestination) Messages(c chan pipeline.Message) {
 	file, err := os.Create("sample_data/destination/" + ts.filename)
 	if err != nil {
-		fmt.Printf("Error creating file: %v", err)
+		log.Fatalf("Error creating file: %v", err)
 		return
 	}
 	defer file.Close()

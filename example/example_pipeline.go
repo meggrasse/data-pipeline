@@ -9,12 +9,12 @@ func main() {
 	pressureSource := SensorTimeSeriesStream{filename: "pressure_timeseries_source.csv"}
 	emptySource := EmptySource{}
 	destination := SensorTimeSeriesDestination{filename: "sensor_timeseries_destination.csv"}
-	transformation := ExampleTransformation{}
-	simpeTransformation := SimpleTransformation{}
+	aggregation := ExampleAggregation{}
+	unitConversion := UnitConversion{}
 
 	pipeline := pipeline.Pipeline{
 		Sources: []pipeline.Source{&flowSource, &pressureSource, &emptySource},
-		Processings: []pipeline.Processing{&transformation, &simpeTransformation},
+		Processings: []pipeline.Processing{&aggregation, &unitConversion},
 		Destination: &destination,
 	}
 	pipeline.Run()
