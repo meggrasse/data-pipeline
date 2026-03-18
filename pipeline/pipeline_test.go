@@ -6,12 +6,23 @@ import (
 	"sort"
 )
 
-type TestSource struct {
-	t *testing.T
-}
+type TestSource struct {}
+
+type TestProcessing struct {}
 
 type TestDestination struct {
 	t *testing.T
+}
+
+type TestNoSourceDestination struct {
+	t *testing.T
+}
+
+func (dest *TestNoSourceDestination) Messages(stream MessageStream) {
+	_, open := <- stream
+	if open {
+		dest.t.Errorf("Expected stream to be closed.")
+	}
 }
 
 func validSchema() (string, string) {
@@ -33,12 +44,19 @@ func testMessage() Message {
 	}
 }
 
-func (testSource *TestSource) Messages(stream chan Message) {
+func (testSource *TestSource) Messages(stream MessageStream) {
 	stream <- testMessage()
 	close(stream)
 }
 
-func (testDestination *TestDestination) Messages(stream chan Message) {
+func (tp *TestProcessing) Process(in MessageStream, out MessageStream) {
+	for message := range in {
+		out <- message
+	}
+	close(out)
+}
+
+func (testDestination *TestDestination) Messages(stream MessageStream) {
 	count := 0
 	for message := range stream {
 		count++
@@ -109,11 +127,27 @@ func TestUnsupportedSchemaVersion(t *testing.T) {
 	}
 }
 
-// TODO: test no source?
-func TestNoProcessingPipeline(t *testing.T) {
-
+func TestPipeline(t *testing.T) {
 	pipeline := Pipeline {
-		Sources: []Source{&TestSource{t: t}},
+		Sources: []Source{&TestSource{}},
+		Processings: []Processing{&TestProcessing{}},
+		Destination: &TestDestination{t: t},
+	}
+	pipeline.Run()
+}
+
+func TestNoSourcePipeline(t *testing.T) {
+	pipeline := Pipeline {
+		Sources: []Source{},
+		Processings: []Processing{&TestProcessing{}},
+		Destination: &TestNoSourceDestination{t: t},
+	}
+	pipeline.Run()
+}
+
+func TestNoProcessingPipeline(t *testing.T) {
+	pipeline := Pipeline {
+		Sources: []Source{&TestSource{}},
 		Processings: []Processing{},
 		Destination: &TestDestination{t: t},
 	}
